@@ -9,24 +9,28 @@ import 'rxjs/add/operator/catch';
 export class TradeHistoryService {
 
   constructor(private http: Http) { }
-  baseUrl = 'https://min-api.cryptocompare.com';
+  baseUrl = 'https://api.binance.com/api/v3/klines';
   handleError(error : Response) {
       console.error(error);
       return Observable.throw(error);
   }
   
   getBars(symbolInfo, resolution, from, to, first, limit):Observable<any> {
+    console.log(symbolInfo);
+    
     var split_symbol = symbolInfo.name.split(/[:/]/);
-			const url = resolution === 'D' ? '/data/histoday' : parseInt(resolution) >= 60 ? '/data/histohour' : '/data/histominute'
+			// const url = resolution === 'D' ? '/data/histoday' : parseInt(resolution) >= 60 ? '/data/histohour' : '/data/histominute'
 			const qs = {
-					e: split_symbol[0],
-					fsym: split_symbol[1],
-					tsym: split_symbol[2],
-					toTs:  to ? to : '',
-					limit: limit ? limit : 2000
+          symbol: `${split_symbol[0]}${split_symbol[1]}`,
+          interval: '1m',
+          limit: 500
+					// fsym: split_symbol[1],
+					// tsym: split_symbol[2],
+					// toTs:  to ? to : '',
+					// limit: limit ? limit : 2000
         }
 
-        return this.http.get(`${this.baseUrl}${url}`,{params:qs})
+        return this.http.get(`${this.baseUrl}`,{params:qs})
           .map(res => { 
             return res.json();
           })

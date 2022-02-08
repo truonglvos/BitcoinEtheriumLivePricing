@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { AfterViewInit, Component, Input, OnInit } from '@angular/core';
 import {
     widget,
     IChartingLibraryWidget,
@@ -21,9 +21,9 @@ const history={};
   templateUrl: './trading-view-chart.component.html',
   styleUrls: ['./trading-view-chart.component.css']
 })
-export class TradingViewChartComponent implements OnInit {
+export class TradingViewChartComponent implements OnInit, AfterViewInit {
 
-    public _symbol: ChartingLibraryWidgetOptions['symbol'] = 'Coinbase:BTC/USD';
+    public _symbol: ChartingLibraryWidgetOptions['symbol'] = 'IDEX:USDT';
     private _interval: ChartingLibraryWidgetOptions['interval'] = '1';
     private _libraryPath: ChartingLibraryWidgetOptions['library_path'] = '/assets/charting_library/';
     private _chartsStorageUrl: ChartingLibraryWidgetOptions['charts_storage_url'] = 'https://saveload.tradingview.com';
@@ -92,6 +92,13 @@ export class TradingViewChartComponent implements OnInit {
       return results === null ? null : decodeURIComponent(results[1].replace(/\+/g, ' ')) as LanguageCode;
     }
     constructor(public tradeHistory: TradeHistoryService, public socketService: SocketService) { }
+  ngAfterViewInit(): void {
+    // const iframe = document.getElementsByTagName('iframe')[0].contentDocument;
+    // const header = iframe.getElementsByClassName('layout__area--top');
+    // header[0].remove();
+    // const chart = iframe.getElementsByClassName('layout__area--center');
+    // (chart[0]as any).style.top = 0;
+  }
 
     ngOnInit() {
         this.loadTradingViewData();
@@ -102,24 +109,20 @@ export class TradingViewChartComponent implements OnInit {
             container_id: this._containerId,
             library_path: this._libraryPath,
             locale: this.getLanguageFromURL() || 'en',
-            disabled_features: ['use_localstorage_for_settings'],
-            enabled_features: ['study_templates'],
+            disabled_features: [
+              'use_localstorage_for_settings',
+              'timeframes_toolbar',
+              'border_around_the_chart',
+              'header_widget',
+            
+            ],
+            // enabled_features: ['study_templates'],
             charts_storage_url: this._chartsStorageUrl,
             charts_storage_api_version: this._chartsStorageApiVersion,
             client_id: this._clientId,
             user_id: this._userId,
             fullscreen: this._fullscreen,
             autosize: this._autosize,
-            overrides: {
-        "mainSeriesProperties.showCountdown": true,
-				"paneProperties.background": "#131722",
-				"paneProperties.vertGridProperties.color": "#363c4e",
-				"paneProperties.horzGridProperties.color": "#363c4e",
-				"symbolWatermarkProperties.transparency": 90,
-				"scalesProperties.textColor" : "#AAA",
-				"mainSeriesProperties.candleStyle.wickUpColor": '#336854',
-				"mainSeriesProperties.candleStyle.wickDownColor": '#7f323f',
-			}
         };
 
         const tvWidget = new widget(widgetOptions);
@@ -151,10 +154,11 @@ export class TradingViewChartComponent implements OnInit {
             console.log('ResolveSymbol running');
             
             var split_data = symbolName.split(/[:/]/);
+            console.log(split_data);
             
             var symbol_stub = {
               name: symbolName,
-              description: `${split_data[1]}/${split_data[2]}`,
+              description: `${split_data[0]}/${split_data[1]}`,
               type: 'crypto',
               session: '24x7',
               timezone: this.timezone,
@@ -192,20 +196,20 @@ export class TradingViewChartComponent implements OnInit {
             }
             //sending 2000 default limit
             this.tradeHistory.getBars(symbolInfo,resolution,from,to, firstDataRequest,2000).subscribe((data) => {
-              console.log({data})
-              if (data.Response && data.Response === 'Error') {
+              console.log(data)
+              if (!data) {
                 console.log('CryptoCompare data fetching error :',data.Message)
                 onHistoryCallback([], {noData: true})
               }
-              if (data.Data.length) {
-                var bars = data.Data.map(el => {
+              if (data.length) {
+                var bars = data.map(el => {
                   return {
-                    time: el.time * 1000, 
-                    low: el.low,
-                    high: el.high,
-                    open: el.open,
-                    close: el.close,
-                    volume: el.volumefrom 
+                    time: el[0], 
+                     open: el[1],
+                     high: el[2],
+                    low: el[3],
+                    close: el[4],
+                    volume: el[5] 
                   }
                 })
                   if (firstDataRequest) {
@@ -271,6 +275,20 @@ export class TradingViewChartComponent implements OnInit {
             console.log('getServerTime Running')
           }
       }
+    }
+
+    handleClick(){
+      this._tvWidget.setSymbol(
+        this._symbol,
+        '1d',
+        () => {
+          console.log('Inside on ready');
+            
+          },
+
+      );
+      this._tvWidget.load({name: this._symbol,});
+      
     }
 
 }
